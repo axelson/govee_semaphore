@@ -7,8 +7,8 @@ defmodule Notes.Application do
 
   def start(_type, _args) do
     children = [
-      # Starts a worker by calling: Notes.Worker.start_link(arg)
-      # {Notes.Worker, arg}
+      {Notes, []},
+      {Phoenix.PubSub, name: :notes_pubsub}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
