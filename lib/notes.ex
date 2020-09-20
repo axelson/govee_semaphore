@@ -43,6 +43,7 @@ defmodule Notes do
   end
 
   def handle_call(:clear_note, _from, state) do
+    Phoenix.PubSub.broadcast!(:notes_pubsub, "notes", {:notes, :submit_note, nil})
     state = %State{state | note: nil}
     {:reply, :ok, state}
   end
@@ -52,7 +53,7 @@ defmodule Notes do
   end
 
   def handle_call(:submit_note, _from, state) do
-    Phoenix.PubSub.broadcast!(:notes_pubsub, "notes", state.note)
+    Phoenix.PubSub.broadcast!(:notes_pubsub, "notes", {:notes, :submit_note, state.note})
     {:reply, :ok, state}
   end
 end
