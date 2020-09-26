@@ -15,7 +15,7 @@ defmodule Notes.MixProject do
   def application do
     [
       extra_applications: [:logger],
-      mod: {Notes.Application, []}
+      mod: {NotesApplication, []}
     ]
   end
 

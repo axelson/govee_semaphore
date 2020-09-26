@@ -1,4 +1,4 @@
-defmodule Notes.Application do
+defmodule NotesApplication do
   # See https://hexdocs.pm/elixir/Application.html
   # for more information on OTP Applications
   @moduledoc false
@@ -7,7 +7,7 @@ defmodule Notes.Application do
 
   def start(_type, _args) do
     children = [
-      {Notes, []},
+      {Notes.Server, []},
       {Phoenix.PubSub, name: :notes_pubsub}
     ]
 

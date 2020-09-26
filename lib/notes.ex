@@ -1,59 +1,12 @@
 defmodule Notes do
-  use GenServer
-
-  defmodule State do
-    use TypedStruct
-
-    typedstruct(enforce: true) do
-      field :note, String.t(), default: nil
-    end
+  def subscribe do
+    :ok = Phoenix.PubSub.subscribe(:notes_pubsub, "notes")
   end
 
-  def start_link(opts, genserver_opts \\ []) do
-    genserver_opts = Keyword.put_new(genserver_opts, :name, __MODULE__)
-    GenServer.start_link(__MODULE__, opts, genserver_opts)
-  end
-
-  def set_note(note) do
-    GenServer.call(__MODULE__, {:set_note, note})
-  end
-
-  def clear_note do
-    GenServer.call(__MODULE__, :clear_note)
-  end
-
-  def get_note do
-    GenServer.call(__MODULE__, :get_note)
-  end
-
-  def submit_note do
-    GenServer.call(__MODULE__, :submit_note)
-  end
-
-  @impl GenServer
-  def init(_opts) do
-    state = %State{}
-    {:ok, state}
-  end
-
-  @impl GenServer
-  def handle_call({:set_note, note}, _from, state) do
-    state = %State{state | note: note}
-    {:reply, :ok, state}
-  end
-
-  def handle_call(:clear_note, _from, state) do
-    Phoenix.PubSub.broadcast!(:notes_pubsub, "notes", {:notes, :submit_note, nil})
-    state = %State{state | note: nil}
-    {:reply, :ok, state}
-  end
-
-  def handle_call(:get_note, _from, state) do
-    {:reply, state.note, state}
-  end
-
-  def handle_call(:submit_note, _from, state) do
-    Phoenix.PubSub.broadcast!(:notes_pubsub, "notes", {:notes, :submit_note, state.note})
-    {:reply, :ok, state}
-  end
+  defdelegate start_link(opts), to: Notes.Server
+  defdelegate start_link(opts, genserver_opts), to: Notes.Server
+  defdelegate set_note(note), to: Notes.Server
+  defdelegate clear_note, to: Notes.Server
+  defdelegate get_note, to: Notes.Server
+  defdelegate submit_note, to: Notes.Server
 end
