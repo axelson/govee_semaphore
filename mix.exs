@@ -22,8 +22,13 @@ defmodule Notes.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      dep(:govee, :path),
+
       {:typed_struct, ">= 0.0.0"},
       {:phoenix_pubsub, "~> 2.0"}
     ]
   end
+
+  defp dep(:govee, :github), do: {:govee, github: "axelson/govee"}
+  defp dep(:govee, :path), do: {:govee, path: "~/dev/govee"}
 end
