@@ -9,4 +9,6 @@ defmodule Notes do
   defdelegate clear_note, to: Notes.Server
   defdelegate get_note, to: Notes.Server
   defdelegate submit_note, to: Notes.Server
+  defdelegate start_meeting, to: Notes.Server
+  defdelegate finish_meeting, to: Notes.Server
 end

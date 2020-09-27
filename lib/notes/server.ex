@@ -4,8 +4,8 @@ defmodule Notes.Server do
   alias Govee.CommonCommands
   alias Govee.BLEConnection
 
-  # @meeting_in_progress_color 0xFF0000
-  # @meeting_finished_color 0x0D9106
+  @meeting_in_progress_color 0xFF0000
+  @meeting_finished_color 0x0D9106
   @note_color 0x45FFF3
 
   defmodule State do
@@ -35,6 +35,14 @@ defmodule Notes.Server do
 
   def submit_note do
     GenServer.call(__MODULE__, :submit_note)
+  end
+
+  def start_meeting do
+    GenServer.call(__MODULE__, :start_meeting)
+  end
+
+  def finish_meeting do
+    GenServer.call(__MODULE__, :finish_meeting)
   end
 
   @impl GenServer
@@ -69,6 +77,49 @@ defmodule Notes.Server do
 
     state = %State{state | note: note}
     {:reply, :ok, state}
+  end
+
+  def handle_call(:start_meeting, _, socket) do
+    Task.start_link(fn ->
+      flash_color_3_times(@meeting_in_progress_color)
+    end)
+
+    {:reply, :ok, socket}
+  end
+
+  def handle_call(:finish_meeting, _, socket) do
+    Task.start_link(fn ->
+      flash_color_3_times(@meeting_finished_color)
+    end)
+
+    {:reply, :ok, socket}
+  end
+
+  defp flash_color_3_times(color) do
+    CommonCommands.turn_on() |> run_command()
+    CommonCommands.set_color(color) |> run_command()
+
+    Process.sleep(1_000)
+    CommonCommands.turn_off() |> run_command()
+
+    Process.sleep(300)
+
+    CommonCommands.turn_on() |> run_command()
+    CommonCommands.set_color(color) |> run_command()
+    Process.sleep(1_000)
+
+    CommonCommands.turn_off() |> run_command()
+    Process.sleep(300)
+
+    CommonCommands.turn_on() |> run_command()
+    CommonCommands.set_color(color) |> run_command()
+    Process.sleep(1_000)
+
+    CommonCommands.turn_off() |> run_command()
+    Process.sleep(300)
+
+    CommonCommands.turn_on() |> run_command()
+    CommonCommands.set_color(color) |> run_command()
   end
 
   defp run_command(command) do
