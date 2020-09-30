@@ -3,6 +3,7 @@
   "blue_heron_transport_usb": {:git, "https://github.com/smartrent/blue_heron.git", "739b07c1f027c9fa00995b943b39ef95b90f87c4", [branch: "main", sparse: "blue_heron_transport_usb"]},
   "elixir_make": {:hex, :elixir_make, "0.6.1", "8faa29a5597faba999aeeb72bbb9c91694ef8068f0131192fb199f98d32994ef", [:mix], [], "hexpm", "35d33270680f8d839a4003c3e9f43afb595310a592405a00afc12de4c7f55a18"},
   "enum_type": {:git, "https://github.com/axelson/enum_type.git", "56de320d470a77b292cc9366eaf075ba0ac191ea", [branch: "conditionally-generate-ecto-types"]},
+  "govee": {:git, "https://github.com/axelson/govee.git", "25844d350d0c5c8d848254eb007edffb43f9af74", []},
   "nimble_options": {:hex, :nimble_options, "0.3.0", "1872911bf50a048f04da26e02704e6aeafc362c2daa7636b6dbfda9492ccfcfa", [:mix], [], "hexpm", "180790a8644fea402452bc15bb54b9bf2c8e5c1fdeb6b39d8072e59c324edf7f"},
   "phoenix_pubsub": {:hex, :phoenix_pubsub, "2.0.0", "a1ae76717bb168cdeb10ec9d92d1480fec99e3080f011402c0a2d68d47395ffb", [:mix], [], "hexpm", "c52d948c4f261577b9c6fa804be91884b381a7f8f18450c5045975435350f771"},
   "typed_struct": {:hex, :typed_struct, "0.2.1", "e1993414c371f09ff25231393b6430bd89d780e2a499ae3b2d2b00852f593d97", [:mix], [], "hexpm", "8f5218c35ec38262f627b2c522542f1eae41f625f92649c0af701a6fab2e11b3"},

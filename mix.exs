@@ -22,7 +22,7 @@ defmodule GoveeSemaphore.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      dep(:govee, :path),
+      dep(:govee, :github),
       {:enum_type, github: "axelson/enum_type", branch: "conditionally-generate-ecto-types"},
       {:typed_struct, ">= 0.0.0"},
       {:phoenix_pubsub, "~> 2.0"}
