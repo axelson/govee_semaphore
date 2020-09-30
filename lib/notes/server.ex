@@ -1,5 +1,8 @@
 defmodule Notes.Server do
   use GenServer
+  use EnumType
+
+  require Logger
 
   alias Govee.CommonCommands
   alias Govee.BLEConnection
@@ -8,11 +11,19 @@ defmodule Notes.Server do
   @meeting_finished_color 0x0D9106
   @note_color 0x45FFF3
 
+  defenum Mode, generate_ecto_type: false do
+    value(Clear, "clear")
+    value(MeetingInProgress, "meeting_in_progress")
+    value(MeetingFinished, "meeting_finished")
+    value(NoteSet, "note_set")
+  end
+
   defmodule State do
     use TypedStruct
 
     typedstruct(enforce: true) do
       field :note, String.t(), default: nil
+      field :mode, Mode.t()
     end
   end
 
@@ -45,9 +56,13 @@ defmodule Notes.Server do
     GenServer.call(__MODULE__, :finish_meeting)
   end
 
+  def set_color(color) do
+    GenServer.call(__MODULE__, {:set_color, color})
+  end
+
   @impl GenServer
   def init(_opts) do
-    state = %State{}
+    state = %State{mode: Mode.Clear}
     {:ok, state}
   end
 
@@ -60,7 +75,7 @@ defmodule Notes.Server do
   def handle_call(:clear_note, _from, state) do
     CommonCommands.turn_off() |> run_command()
     Phoenix.PubSub.broadcast!(:notes_pubsub, "notes", {:notes, :submit_note, nil})
-    state = %State{state | note: nil}
+    state = %State{state | note: nil, mode: Mode.Clear}
 
     {:reply, :ok, state}
   end
@@ -75,51 +90,77 @@ defmodule Notes.Server do
     note = state.note || :empty
     Phoenix.PubSub.broadcast!(:notes_pubsub, "notes", {:notes, :submit_note, note})
 
-    state = %State{state | note: note}
+    state = %State{state | note: note, mode: NoteSet}
     {:reply, :ok, state}
   end
 
-  def handle_call(:start_meeting, _, socket) do
-    Task.start_link(fn ->
-      flash_color_3_times(@meeting_in_progress_color)
-    end)
+  def handle_call(:start_meeting, _, state) do
+    flash_color_3_times(@meeting_in_progress_color, Mode.MeetingInProgress)
 
-    {:reply, :ok, socket}
+    state = %State{state | mode: Mode.MeetingInProgress}
+    {:reply, :ok, state}
   end
 
-  def handle_call(:finish_meeting, _, socket) do
-    Task.start_link(fn ->
-      flash_color_3_times(@meeting_finished_color)
-    end)
+  def handle_call(:finish_meeting, _, state) do
+    flash_color_3_times(@meeting_finished_color, Mode.MeetingFinished)
 
-    {:reply, :ok, socket}
+    state = %State{state | mode: Mode.MeetingFinished}
+    {:reply, :ok, state}
   end
 
-  defp flash_color_3_times(color) do
-    CommonCommands.turn_on() |> run_command()
-    CommonCommands.set_color(color) |> run_command()
+  @impl GenServer
+  def handle_info({:set_color, color, mode}, state) do
+    if state.mode == mode do
+      CommonCommands.turn_on() |> run_command()
+      CommonCommands.set_color(color) |> run_command()
+    end
 
-    Process.sleep(1_000)
-    CommonCommands.turn_off() |> run_command()
+    {:noreply, state}
+  end
 
-    Process.sleep(300)
+  def handle_info({:turn_off, mode}, state) do
+    if state.mode == mode do
+      CommonCommands.turn_off() |> run_command()
+    end
 
-    CommonCommands.turn_on() |> run_command()
-    CommonCommands.set_color(color) |> run_command()
-    Process.sleep(1_000)
+    {:noreply, state}
+  end
 
-    CommonCommands.turn_off() |> run_command()
-    Process.sleep(300)
+  def handle_info(event, state) do
+    Logger.warn("Unhandled event: #{inspect(event)}")
+    {:noreply, state}
+  end
 
-    CommonCommands.turn_on() |> run_command()
-    CommonCommands.set_color(color) |> run_command()
-    Process.sleep(1_000)
+  defp flash_color_3_times(color, mode) do
+    t = 0
 
-    CommonCommands.turn_off() |> run_command()
-    Process.sleep(300)
+    schedule_color_change(color, t, mode)
+    t = t + 1000
 
-    CommonCommands.turn_on() |> run_command()
-    CommonCommands.set_color(color) |> run_command()
+    schedule_turn_off(t, mode)
+    t = t + 300
+
+    schedule_color_change(color, t, mode)
+    t = t + 1000
+
+    schedule_turn_off(t, mode)
+    t = t + 300
+
+    schedule_color_change(color, t, mode)
+    t = t + 1000
+
+    schedule_turn_off(t, mode)
+    t = t + 300
+
+    schedule_color_change(color, t, mode)
+  end
+
+  defp schedule_color_change(color, time, mode) do
+    Process.send_after(self(), {:set_color, color, mode}, time)
+  end
+
+  defp schedule_turn_off(time, mode) do
+    Process.send_after(self(), {:turn_off, mode}, time)
   end
 
   defp run_command(command) do

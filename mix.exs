@@ -23,7 +23,7 @@ defmodule Notes.MixProject do
   defp deps do
     [
       dep(:govee, :path),
-
+      {:enum_type, github: "axelson/enum_type", branch: "conditionally-generate-ecto-types"},
       {:typed_struct, ">= 0.0.0"},
       {:phoenix_pubsub, "~> 2.0"}
     ]
