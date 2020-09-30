@@ -1,4 +1,4 @@
-defmodule Notes.Server do
+defmodule GoveeSemaphore.Server do
   use GenServer
   use EnumType
 
@@ -74,7 +74,7 @@ defmodule Notes.Server do
 
   def handle_call(:clear_note, _from, state) do
     CommonCommands.turn_off() |> run_command()
-    Phoenix.PubSub.broadcast!(:notes_pubsub, "notes", {:notes, :submit_note, nil})
+    Phoenix.PubSub.broadcast!(:govee_semaphore_pubsub, "govee_semaphore", {:govee_semaphore, :submit_note, nil})
     state = %State{state | note: nil, mode: Mode.Clear}
 
     {:reply, :ok, state}
@@ -88,7 +88,7 @@ defmodule Notes.Server do
     CommonCommands.turn_on() |> run_command()
     CommonCommands.set_color(@note_color) |> run_command()
     note = state.note || :empty
-    Phoenix.PubSub.broadcast!(:notes_pubsub, "notes", {:notes, :submit_note, note})
+    Phoenix.PubSub.broadcast!(:govee_semaphore_pubsub, "govee_semaphore", {:govee_semaphore, :submit_note, note})
 
     state = %State{state | note: note, mode: NoteSet}
     {:reply, :ok, state}

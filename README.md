@@ -1,4 +1,4 @@
-# Notes
+# GoveeSemaphore
 
 TODO:
 - [ ] Rename to GoveeSemaphore

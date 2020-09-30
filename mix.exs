@@ -1,9 +1,9 @@
-defmodule Notes.MixProject do
+defmodule GoveeSemaphore.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :notes,
+      app: :govee_semaphore,
       version: "0.1.0",
       elixir: "~> 1.10",
       start_permanent: Mix.env() == :prod,
@@ -15,7 +15,7 @@ defmodule Notes.MixProject do
   def application do
     [
       extra_applications: [:logger],
-      mod: {NotesApplication, []}
+      mod: {GoveeSemaphoreApplication, []}
     ]
   end
 
