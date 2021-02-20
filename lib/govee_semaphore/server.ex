@@ -181,6 +181,8 @@ defmodule GoveeSemaphore.Server do
   end
 
   defp for_each_device(fun) when is_function(fun, 1) do
-    Enum.each(BLEConnection.connected_devices(BLEServer) |> IO.inspect(label: "connected_devices"), fun)
+    if Process.whereis(BLEServer) do
+      Enum.each(BLEConnection.connected_devices(BLEServer), fun)
+    end
   end
 end
