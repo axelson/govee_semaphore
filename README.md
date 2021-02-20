@@ -1,4 +1,5 @@
 # GoveeSemaphore
 
 TODO:
-- [ ] Rename to GoveeSemaphore
+- [x] Rename to GoveeSemaphore
+- [ ] "End" should eventually fade out the brightness
