@@ -10,6 +10,7 @@ defmodule GoveeSemaphore.Server do
   @meeting_in_progress_color 0xFF0000
   @meeting_finished_color 0x0D9106
   @note_color 0x45FFF3
+  @default_brightness 132
 
   defenum Mode, generate_ecto_type: false do
     value(Clear, "clear")
@@ -113,7 +114,8 @@ defmodule GoveeSemaphore.Server do
   end
 
   def handle_call(:finish_meeting, _, state) do
-    flash_color_3_times(@meeting_finished_color, Mode.MeetingFinished)
+    time_delay = flash_color_3_times(@meeting_finished_color, Mode.MeetingFinished)
+    schedule_fade_out(time_delay + 5000)
 
     state = %State{state | mode: Mode.MeetingFinished}
     {:reply, :ok, state}
@@ -137,6 +139,21 @@ defmodule GoveeSemaphore.Server do
     {:noreply, state}
   end
 
+  def handle_info({:fade_out, brightness}, state) do
+    if state.mode == Mode.MeetingFinished do
+      CommonCommands.set_brightness(brightness) |> run_command()
+      step_delay = 15
+
+      cond do
+        brightness == 0 -> CommonCommands.turn_off() |> run_command()
+        brightness > 1 -> schedule_fade_out(step_delay, brightness - 1)
+        brightness <= 1 -> schedule_fade_out(step_delay, 0)
+      end
+    end
+
+    {:noreply, state}
+  end
+
   def handle_info(event, state) do
     Logger.warn("Unhandled event: #{inspect(event)}")
     {:noreply, state}
@@ -145,6 +162,7 @@ defmodule GoveeSemaphore.Server do
   defp flash_color_3_times(color, mode) do
     t = 0
 
+    CommonCommands.set_brightness(@default_brightness) |> run_command()
     schedule_color_change(color, t, mode)
     t = t + 1000
 
@@ -164,6 +182,7 @@ defmodule GoveeSemaphore.Server do
     t = t + 300
 
     schedule_color_change(color, t, mode)
+    t
   end
 
   defp schedule_color_change(color, time, mode) do
@@ -172,6 +191,10 @@ defmodule GoveeSemaphore.Server do
 
   defp schedule_turn_off(time, mode) do
     Process.send_after(self(), {:turn_off, mode}, time)
+  end
+
+  defp schedule_fade_out(time, brightness \\ @default_brightness) do
+    Process.send_after(self(), {:fade_out, brightness}, time)
   end
 
   defp run_command(command) do
