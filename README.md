@@ -2,4 +2,5 @@
 
 TODO:
 - [x] Rename to GoveeSemaphore
-- [ ] "End" should eventually fade out the brightness
+- [x] "End" should eventually fade out the brightness
+- [ ] Create multiple GoveeSemaphore instances (one per connection)?

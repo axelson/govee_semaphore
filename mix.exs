@@ -23,12 +23,14 @@ defmodule GoveeSemaphore.MixProject do
   defp deps do
     [
       dep(:govee, :github),
+      # {:govee_scenic, path: "~/dev/govee_scenic", only: :dev},
+      {:govee_scenic, github: "axelson/govee_scenic", only: :dev},
       {:enum_type, github: "axelson/enum_type", branch: "conditionally-generate-ecto-types"},
       {:typed_struct, ">= 0.0.0"},
       {:phoenix_pubsub, "~> 2.0"}
     ]
   end
 
-  defp dep(:govee, :github), do: {:govee, github: "axelson/govee"}
+  defp dep(:govee, :github), do: {:govee, github: "axelson/govee", branch: "new-update"}
   defp dep(:govee, :path), do: {:govee, path: "~/dev/govee"}
 end

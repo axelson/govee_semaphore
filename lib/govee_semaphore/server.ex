@@ -4,12 +4,10 @@ defmodule GoveeSemaphore.Server do
 
   require Logger
 
-  alias Govee.CommonCommands
-  alias Govee.BLEConnection
+  alias Govee.Command
 
   @meeting_in_progress_color 0xFF0000
   @meeting_finished_color 0x0D9106
-  @note_color 0x45FFF3
   @default_brightness 132
 
   defenum Mode, generate_ecto_type: false do
@@ -33,32 +31,16 @@ defmodule GoveeSemaphore.Server do
     GenServer.start_link(__MODULE__, opts, genserver_opts)
   end
 
-  def set_note(note) do
-    GenServer.call(__MODULE__, {:set_note, note})
+  def start_meeting(conn) do
+    GenServer.call(__MODULE__, {:start_meeting, conn})
   end
 
-  def clear_note do
-    GenServer.call(__MODULE__, :clear_note)
+  def finish_meeting(conn) do
+    GenServer.call(__MODULE__, {:finish_meeting, conn})
   end
 
-  def get_note do
-    GenServer.call(__MODULE__, :get_note)
-  end
-
-  def submit_note do
-    GenServer.call(__MODULE__, :submit_note)
-  end
-
-  def start_meeting do
-    GenServer.call(__MODULE__, :start_meeting)
-  end
-
-  def finish_meeting do
-    GenServer.call(__MODULE__, :finish_meeting)
-  end
-
-  def set_color(color) do
-    GenServer.call(__MODULE__, {:set_color, color})
+  def set_color(conn, color) do
+    GenServer.call(__MODULE__, {:set_color, conn, color})
   end
 
   @impl GenServer
@@ -68,86 +50,48 @@ defmodule GoveeSemaphore.Server do
   end
 
   @impl GenServer
-  def handle_call({:set_note, note}, _from, state) do
-    state = %State{state | note: note}
-    {:reply, :ok, state}
-  end
-
-  def handle_call(:clear_note, _from, state) do
-    CommonCommands.turn_off() |> run_command()
-
-    Phoenix.PubSub.broadcast!(
-      :govee_semaphore_pubsub,
-      "govee_semaphore",
-      {:govee_semaphore, :submit_note, nil}
-    )
-
-    state = %State{state | note: nil, mode: Mode.Clear}
-
-    {:reply, :ok, state}
-  end
-
-  def handle_call(:get_note, _from, state) do
-    {:reply, state.note, state}
-  end
-
-  def handle_call(:submit_note, _from, state) do
-    CommonCommands.turn_on() |> run_command()
-    CommonCommands.set_color(@note_color) |> run_command()
-    note = state.note || :empty
-
-    Phoenix.PubSub.broadcast!(
-      :govee_semaphore_pubsub,
-      "govee_semaphore",
-      {:govee_semaphore, :submit_note, note}
-    )
-
-    state = %State{state | note: note, mode: NoteSet}
-    {:reply, :ok, state}
-  end
-
-  def handle_call(:start_meeting, _, state) do
-    flash_color_3_times(@meeting_in_progress_color, Mode.MeetingInProgress)
+  def handle_call({:start_meeting, conn}, _, state) do
+    flash_color_3_times(conn, @meeting_in_progress_color, Mode.MeetingInProgress)
 
     state = %State{state | mode: Mode.MeetingInProgress}
     {:reply, :ok, state}
   end
 
-  def handle_call(:finish_meeting, _, state) do
-    time_delay = flash_color_3_times(@meeting_finished_color, Mode.MeetingFinished)
-    schedule_fade_out(time_delay + 5000)
+  def handle_call({:finish_meeting, conn}, _, state) do
+    time_delay = flash_color_3_times(conn, @meeting_finished_color, Mode.MeetingFinished)
+    schedule_fade_out(conn, time_delay + 5000)
 
     state = %State{state | mode: Mode.MeetingFinished}
     {:reply, :ok, state}
   end
 
   @impl GenServer
-  def handle_info({:set_color, color, mode}, state) do
+  def handle_info({:set_color, conn, color, mode}, state) do
     if state.mode == mode do
-      CommonCommands.turn_on() |> run_command()
-      CommonCommands.set_color(color) |> run_command()
+      Command.turn_on() |> execute_command(conn)
+      Command.set_color(color) |> execute_command(conn)
     end
 
     {:noreply, state}
   end
 
-  def handle_info({:turn_off, mode}, state) do
+  def handle_info({:turn_off, conn, mode}, state) do
     if state.mode == mode do
-      CommonCommands.turn_off() |> run_command()
+      Command.turn_off() |> execute_command(conn)
     end
 
     {:noreply, state}
   end
 
-  def handle_info({:fade_out, brightness}, state) do
+  def handle_info({:fade_out, conn, brightness}, state) do
     if state.mode == Mode.MeetingFinished do
-      CommonCommands.set_brightness(brightness) |> run_command()
+      Command.set_brightness(brightness) |> execute_command(conn)
       step_delay = 15
 
       cond do
-        brightness == 0 -> CommonCommands.turn_off() |> run_command()
-        brightness > 1 -> schedule_fade_out(step_delay, brightness - 1)
-        brightness <= 1 -> schedule_fade_out(step_delay, 0)
+        brightness == 0 -> Command.turn_off() |> execute_command(conn)
+        brightness > 1 -> schedule_fade_out(conn, step_delay, brightness - 1)
+        brightness <= 1 -> schedule_fade_out(conn, step_delay, 0)
       end
     end
 
@@ -159,53 +103,45 @@ defmodule GoveeSemaphore.Server do
     {:noreply, state}
   end
 
-  defp flash_color_3_times(color, mode) do
+  defp flash_color_3_times(conn, color, mode) do
     t = 0
 
-    CommonCommands.set_brightness(@default_brightness) |> run_command()
-    schedule_color_change(color, t, mode)
+    Command.set_brightness(@default_brightness) |> execute_command(conn)
+    schedule_color_change(conn, color, t, mode)
     t = t + 1000
 
-    schedule_turn_off(t, mode)
+    schedule_turn_off(conn, t, mode)
     t = t + 300
 
-    schedule_color_change(color, t, mode)
+    schedule_color_change(conn, color, t, mode)
     t = t + 1000
 
-    schedule_turn_off(t, mode)
+    schedule_turn_off(conn, t, mode)
     t = t + 300
 
-    schedule_color_change(color, t, mode)
+    schedule_color_change(conn, color, t, mode)
     t = t + 1000
 
-    schedule_turn_off(t, mode)
+    schedule_turn_off(conn, t, mode)
     t = t + 300
 
-    schedule_color_change(color, t, mode)
+    schedule_color_change(conn, color, t, mode)
     t
   end
 
-  defp schedule_color_change(color, time, mode) do
-    Process.send_after(self(), {:set_color, color, mode}, time)
+  defp schedule_color_change(conn, color, time, mode) do
+    Process.send_after(self(), {:set_color, conn, color, mode}, time)
   end
 
-  defp schedule_turn_off(time, mode) do
-    Process.send_after(self(), {:turn_off, mode}, time)
+  defp schedule_turn_off(conn, time, mode) do
+    Process.send_after(self(), {:turn_off, conn, mode}, time)
   end
 
-  defp schedule_fade_out(time, brightness \\ @default_brightness) do
-    Process.send_after(self(), {:fade_out, brightness}, time)
+  defp schedule_fade_out(conn, time, brightness \\ @default_brightness) do
+    Process.send_after(self(), {:fade_out, conn, brightness}, time)
   end
 
-  defp run_command(command) do
-    for_each_device(fn device ->
-      CommonCommands.send_command(command, device.att_client)
-    end)
-  end
-
-  defp for_each_device(fun) when is_function(fun, 1) do
-    if Process.whereis(BLEServer) do
-      Enum.each(BLEConnection.connected_devices(BLEServer), fun)
-    end
+  defp execute_command(command, conn) do
+    GoveeScenic.execute_command(conn, command)
   end
 end
